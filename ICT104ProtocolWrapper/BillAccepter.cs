@@ -65,6 +65,7 @@ namespace ICT104ProtocolWrapper
         private byte[] rawData;
         private int billType;
         private bool tempReset = false;
+        private bool twiceReset = false;
 
         private int[] billTypes=null;
 
@@ -121,7 +122,11 @@ namespace ICT104ProtocolWrapper
 
         ~BillAccepter()
         {
-            ClosePort();
+            if (internalSerialPort.IsOpen)
+            {
+                Logger.Info("Force Close");
+                ClosePort();
+            }
             Logger.Info("BillAccepter Disposed");
         }
         /// <summary>
@@ -157,7 +162,7 @@ namespace ICT104ProtocolWrapper
         {
             if (!internalSerialPort.IsOpen) return;
 
-            mode = Mode.Reset;
+            ChangeMode(Mode.Reset);
             WriteByte(reset);
         }
 
@@ -173,8 +178,9 @@ namespace ICT104ProtocolWrapper
                 Logger.Info("BillAccepter - Open Port");
                 return true;
             }
-            catch
+            catch (Exception e)
             {
+                Logger.Error(e);
                 return false;
             }
         }
@@ -191,8 +197,9 @@ namespace ICT104ProtocolWrapper
                 Logger.Info("BillAccepter - Close Port");
                 return true;
             }
-            catch
+            catch (Exception e)
             {
+                Logger.Error(e);
                 return false;
             }
         }
@@ -207,7 +214,7 @@ namespace ICT104ProtocolWrapper
 
             if (!internalSerialPort.IsOpen) return ERR_CODE.CannotCheckStatus;
 
-            mode = Mode.CheckStatus;
+            ChangeMode(Mode.CheckStatus);
             WriteByte(checkstatus);
             int i = 0;
             while (chkedStatus == ERR_CODE.None && i < 10)
@@ -255,7 +262,7 @@ namespace ICT104ProtocolWrapper
                 {
                     if (mode != Mode.CheckStatus && System.Enum.IsDefined(typeof(CRITICAL_ERRORS), (int)currentBuffer[0]))
                     {
-                        mode = Mode.Reset;
+                        ChangeMode(Mode.Reset);
                         tempReset = true;
                         rawData = null;
                     }
@@ -270,7 +277,7 @@ namespace ICT104ProtocolWrapper
                                 billType = currentBuffer[currentBuffer.IndexOf(sendBillValidated) + 1];
                                 WriteByte(accept);
                             }
-                            mode = Mode.Accepting;
+                            ChangeMode(Mode.Accepting);
                             rawData = null;
                         }
                     }
@@ -280,7 +287,7 @@ namespace ICT104ProtocolWrapper
                         {
                             rawData = null;
                             AcceptBill();
-                            mode = Mode.Idle;
+                            ChangeMode(Mode.Idle);
                         }
                         else if (currentBuffer.Contains(billType1) || currentBuffer.Contains(billType2) || currentBuffer.Contains(billType3) || currentBuffer.Contains(billType4) || currentBuffer.Contains(billType5))
                         {
@@ -297,7 +304,7 @@ namespace ICT104ProtocolWrapper
                         {
                             WriteByte(accept);
                             rawData = null;
-                            mode = Mode.Idle;
+                            ChangeMode(Mode.Idle);
                             Thread.Sleep(100);
                             EnableAccepter();
                             tempReset = false;
@@ -308,9 +315,29 @@ namespace ICT104ProtocolWrapper
                             {
                                 WriteByte(accept);
                                 rawData = null;
-                                mode = Mode.Idle;
+                                ChangeMode(Mode.Idle);
                                 Thread.Sleep(100);
                                 DisableAccepter();
+                            }
+                            else if (currentBuffer.Contains(powerSupplyOn1) || currentBuffer.Contains(powerSupplyOn2))
+                            {
+                                if (twiceReset == false)
+                                {
+                                    Logger.Info("Only One PSO signal. wait again");
+                                    WriteByte(accept);
+                                    rawData = null;
+                                    twiceReset = true;
+                                }
+                                else
+                                {
+                                    Logger.Info("PSO signal again. Get Twice");
+                                    WriteByte(accept);
+                                    rawData = null;
+                                    ChangeMode(Mode.Idle);
+                                    Thread.Sleep(100);
+                                    DisableAccepter();
+                                    twiceReset = false;
+                                }
                             }
                         }
                     }
@@ -319,7 +346,7 @@ namespace ICT104ProtocolWrapper
                     {
                         chkedStatus = (ERR_CODE)(int)currentBuffer[0];
                         rawData = null;
-                        mode = Mode.Idle;
+                        ChangeMode(Mode.Idle);
                     }
                 }
                 else if (rawData != null)
@@ -356,8 +383,9 @@ namespace ICT104ProtocolWrapper
             {
                 result = billTypes[type];
             }
-            catch
+            catch (Exception e)
             {
+                Logger.Error(e);
                 result = -1;
             }
 
@@ -401,6 +429,12 @@ namespace ICT104ProtocolWrapper
                 }
             }
             Logger.Info(log);
+        }
+
+        private void ChangeMode(Mode newMode)
+        {
+            Logger.Info($"Changed Mode from {mode.ToString()} to {newMode.ToString()}");
+            mode = newMode;
         }
     }
 }
