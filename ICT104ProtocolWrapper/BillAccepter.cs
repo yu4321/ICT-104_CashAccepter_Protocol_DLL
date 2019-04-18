@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO.Ports;
 using System.Linq;
 using System.Threading;
-using log4net;
 using System.Reflection;
 
 namespace ICT104ProtocolWrapper
@@ -29,7 +28,6 @@ namespace ICT104ProtocolWrapper
     /// </summary>
     public class BillAccepter
     {
-        public static readonly ILog Logger = ICT104ProtocolWrapper.Logger.LogWriter;
         public static readonly string Name = "ICT104";
         private SerialPort internalSerialPort = new SerialPort();
 
