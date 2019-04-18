@@ -79,11 +79,11 @@ namespace ICT104ProtocolWrapper
         {
             try
             {
-                return $"logs/log{DateTime.Now.ToShortDateString()}_{System.Reflection.Assembly.GetEntryAssembly().GetName().Name}_BillDispenser.log";
+                return $"logs/log{DateTime.Now.ToShortDateString()}_{System.Reflection.Assembly.GetEntryAssembly().GetName().Name}_BillAccepter.log";
             }
             catch
             {
-                return $"logs/logUndefinableDateTime_{System.Reflection.Assembly.GetEntryAssembly().GetName().Name}_BillDispenser.log";
+                return $"logs/logUndefinableDateTime_{System.Reflection.Assembly.GetEntryAssembly().GetName().Name}_BillAccepter.log";
             }
         }
 
